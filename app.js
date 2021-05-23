@@ -10,17 +10,32 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
 // parse application/json
 app.use(bodyParser.json());
-//-------------------------------------------------------------------------------------------
+//-------------------------------------------Incuyendo moongose------------------------------
+const mongoose = require('mongoose');
+
+//Importando rutas-------------------------------------------------------------------------
+const usuarioRoutes = require('./server/routes/usuarioRoutes');
+const indexRoutes = require('./server/routes/indexRoutes');
 
 
-// respond with "hello world" when a GET request is made to the homepage
-app.get('/', function(req, res) {
-    res.status(200).json({
-        "ok": true,
-        "mensaje": "Peticion realizada correctamente"
-    });
+
+//Inicializando la conexion a la base de datos-----------------------------------------------
+mongoose.connect('mongodb://localhost:27017/cafe', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useFindAndModify: false,
+    useCreateIndex: true
+}, (err) => {
+    if (err) { throw err; }
+    console.log('BASE DE DATOS ONLINE');
 });
 
+//RUTAS-----------------------------------------------------------------------------------------
+app.use(indexRoutes);
+app.use(usuarioRoutes);
+
+
+//------------------------Inicializando la api ------------------------------
 app.listen(3000, () => {
     console.log("Escuchando puerto: 3000");
 });
