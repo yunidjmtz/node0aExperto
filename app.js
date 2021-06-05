@@ -1,6 +1,5 @@
 //-----------------------------------------Leyendo Config-----------------------------------
 require('./server/config/config');
-
 //------------------------------------------Leyendo express---------------------------------
 const express = require('express');
 const app = express();
@@ -12,13 +11,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 //-------------------------------------------Incuyendo moongose------------------------------
 const mongoose = require('mongoose');
-
 //Importando rutas-------------------------------------------------------------------------
-const usuarioRoutes = require('./server/routes/usuarioRoutes');
-const indexRoutes = require('./server/routes/indexRoutes');
-
-
-
+const routes = require('./server/routes/routes');
+//RUTAS-----------------------------------------------------------------------------------------
+app.use(routes);
 //Inicializando la conexion a la base de datos-----------------------------------------------
 mongoose.connect('mongodb://localhost:27017/cafe', {
     useNewUrlParser: true,
@@ -29,12 +25,6 @@ mongoose.connect('mongodb://localhost:27017/cafe', {
     if (err) { throw err; }
     console.log('BASE DE DATOS ONLINE');
 });
-
-//RUTAS-----------------------------------------------------------------------------------------
-app.use(indexRoutes);
-app.use(usuarioRoutes);
-
-
 //------------------------Inicializando la api ------------------------------
 app.listen(3000, () => {
     console.log("Escuchando puerto: 3000");

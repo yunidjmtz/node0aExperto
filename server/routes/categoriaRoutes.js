@@ -1,57 +1,86 @@
 //------------------------------------------Leyendo express---------------------------------
 const express = require('express');
 const app = express();
+
 //-------------------------------------Importando Modelo------------------------------------
-const Usuario = require('../models/usuarioModel');
-//--------Incorporando bcrypt para encriptar la contraseña del usuario en el post---------------------
-const bcrypt = require('bcrypt');
+const Categoria = require('../models/categoriaModel');
+
 //--------Incluyendo el underscore para filtrar los elementos que viajan en el body--------------------
 const _ = require('underscore');
+
 //-----------------middlewares para la autenticacion------------------
 const { verificarToken, verificarAdminRole } = require('../middlewares/autenticacion');
 
 
-//Rutas para el CRUD-------------------------------------------------
-app.get('/usuario', verificarToken, (req, res) => {
+//Mostrar todas las categorias
+app.get('/categoria', verificarToken, function(req, res) {
+
 
     let desde = req.query.desde || 0; //req.query viajan los parametros opcionales
     let limite = req.query.limite || 5;
 
 
-    Usuario.find({ estado: true }, 'nombre email role estado google img')
+    Categoria.find({}, 'descripcion')
+        .sort('descripcion') //Para ordenar los elementos
+        .populate('usuario', 'nombre email') //Permite buscar la tabla que tiene relacionada
         .skip(Number(desde)) //Convirtiendolo en un numero con el Number
         .limit(Number(limite))
-        .exec((err, usuarios) => {
+        .exec((err, categorias) => {
             if (err) {
                 return res.status(400).json({
                     "ok": false,
                     "err": err
                 });
             }
-            Usuario.count({ estado: true }, (err, cantRegistros) => { //Contar todos los usuarios
+            Categoria.countDocuments({}, (err, cantRegistros) => { //Contar todos los usuarios
 
                 res.status(200).json({
                     "ok": true,
-                    "usuarios": usuarios,
+                    "categorias": categorias,
                     "totalRegistros": cantRegistros
                 });
             });
+
         });
 });
 
-app.post('/usuario', [verificarToken, verificarAdminRole], function(req, res) {
+//Mostrar categoria por id
+app.get('/categoria/:id', function(req, res) {
+
+    let id = req.params.id;
+
+    Categoria.findById(id, (err, categoriaDB) => {
+        if (err) {
+            return res.status(500).json({
+                "ok": false,
+                "err": err
+            });
+        }
+        if (!categoriaDB) {
+            return res.status(500).json({
+                "ok": false,
+                "err": "El id no es correcto"
+            });
+        }
+        res.status(200).json({
+            "ok": true,
+            "categoria": categoriaDB
+        });
+    });
+
+});
+
+//Agregar Categoria
+app.post('/categoria', verificarToken, function(req, res) {
 
     let body = req.body;
 
-    let usuario = new Usuario({
-        nombre: body.nombre,
-        email: body.email,
-        password: bcrypt.hashSync(body.password, 10), //Encriptando la contrasena
-        img: body.img,
-        role: body.role
+    let categoria = new Categoria({
+        descripcion: body.descripcion,
+        usuario: req.usuario._id
     });
 
-    usuario.save((err, usuarioDB) => {
+    categoria.save((err, categoriaDB) => {
 
         if (err) {
             return res.status(400).json({
@@ -59,23 +88,22 @@ app.post('/usuario', [verificarToken, verificarAdminRole], function(req, res) {
                 "err": err
             });
         }
-
         res.status(200).json({
             "ok": true,
-            "usuario": usuarioDB
+            "categoria": categoriaDB
         });
+
     });
 });
 
-app.put('/usuario/:id', [verificarToken, verificarAdminRole], function(req, res) {
+//Editar Categoria
+app.put('/categoria/:id', verificarToken, function(req, res) {
 
     let id = req.params.id;
     //En este caso se aplica el metodo pick de underscore para filtrar que elementos se necesitan de los que viajan en el body
-    let body = _.pick(req.body, ['nombre', 'email', 'img', 'role', 'estado']);
+    let body = _.pick(req.body, ['descripcion']);
 
-    //Dentro de las opciones de findByIdAndUpdate esta la de (new) que es para decir si usuarioDB sea el nuevo o el viejo en la respuesta y (runValidators) que es para ejecutar las validaciones del schema y (context) para que ejecute las validaciones de uniqueValidator
-
-    Usuario.findByIdAndUpdate(id, body, { new: true, runValidators: true, context: 'query' }, (err, usuarioDB) => {
+    Categoria.findByIdAndUpdate(id, body, { new: true, runValidators: true, context: 'query' }, (err, categoriaDB) => {
         if (err) {
             return res.status(400).json({
                 "ok": false,
@@ -84,16 +112,17 @@ app.put('/usuario/:id', [verificarToken, verificarAdminRole], function(req, res)
         }
         res.status(200).json({
             "ok": true,
-            "usuario": usuarioDB
+            "categoria": categoriaDB
         });
     });
 });
 
-app.delete('/usuario/:id', [verificarToken, verificarAdminRole], function(req, res) {
+//Eliminar Categoria
+app.delete('/categoria/:id', [verificarToken, verificarAdminRole], function(req, res) {
 
     let id = req.params.id;
 
-    Usuario.findByIdAndRemove(id, (err, usuarioBorrado) => {
+    Categoria.findByIdAndRemove(id, (err, categoriaBorrada) => {
 
         if (err) {
             return res.status(400).json({
@@ -101,21 +130,22 @@ app.delete('/usuario/:id', [verificarToken, verificarAdminRole], function(req, r
                 "err": err
             });
         }
-        if (!usuarioBorrado) {
+        if (!categoriaBorrada) {
             return res.status(400).json({
                 "ok": false,
-                "err": { message: 'Usuario no encontrado' }
+                "err": { message: 'Categoria no encontrado' }
             });
         }
         res.status(200).json({
             "ok": true,
-            "usuarioE": usuarioBorrado
+            "categoriaE": categoriaBorrada
         });
-
-
     });
 
 });
+
+
+
 
 //Exportando el fichero para poderlo utilizar en otros elementos
 module.exports = app;
